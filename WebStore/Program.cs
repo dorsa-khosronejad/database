@@ -1,6 +1,11 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System;
+using System.IO;
+using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using WebStore.Assignments;
-using WebStore.Entities;  // Uncomment this after generating your entities
+using WebStore.Entities;
 
 namespace WebStore
 {
@@ -8,17 +13,27 @@ namespace WebStore
     {
         static async Task Main(string[] args)
         {
-            // Ensure you have a valid DbContext connection
-            var optionsBuilder = new DbContextOptionsBuilder<WebStoreContext>();
-            optionsBuilder.UseNpgsql("Host=localhost;Port=5432;Database=WebStore;Username=postgres;Password=Mandanaka88429323");
+            // 1. Build configuration from appsettings.json
+            var configuration = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+                .Build();
 
-            // Initialize the DbContext
-            using var context = new WebStoreContext(optionsBuilder.Options);
+            // 2. Set up DI container
+            var services = new ServiceCollection()
+                .AddSingleton<IConfiguration>(configuration)
+                .AddDbContext<WebStoreContext>((sp, options) =>
+                {
+                    var connStr = configuration.GetConnectionString("WebStoreDb");
+                    options.UseNpgsql(connStr);
+                })
+                .AddTransient<LinqQueriesAssignment>()
+                .BuildServiceProvider();
 
-            // Initialize the LinqQueriesAssignment class
-            var assignments = new LinqQueriesAssignment(context);
+            // 3. Resolve your assignment class (DbContext is injected automatically)
+            var assignments = services.GetRequiredService<LinqQueriesAssignment>();
 
-            // Execute all LINQ query methods
+            // 4. Execute all LINQ query methods
             await assignments.Task01_ListAllCustomers();
             await assignments.Task02_ListOrdersWithItemCount();
             await assignments.Task03_ListProductsByDescendingPrice();

@@ -1,0 +1,104 @@
+protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    // --- Address ---
+    modelBuilder.Entity<Address>(entity =>
+    {
+        entity.HasKey(e => e.AddressId).HasName("addresses_pkey");
+        entity.ToTable("addresses");
+        // …other Address mappings…
+    });
+
+    // --- OrderItem (composite key) ---
+    modelBuilder.Entity<OrderItem>(entity =>
+    {
+        entity.HasKey(e => new { e.OrderId, e.ProductId }).HasName("pk_order_items");
+        entity.ToTable("order_items");
+
+        entity.HasOne(e => e.Order)
+              .WithMany(o => o.OrderItems)
+              .HasForeignKey(e => e.OrderId)
+              .HasConstraintName("fk_oi_order");
+
+        entity.HasOne(e => e.Product)
+              .WithMany(p => p.OrderItems)
+              .HasForeignKey(e => e.ProductId)
+              .HasConstraintName("fk_oi_product");
+
+        entity.Property(e => e.Quantity).HasColumnName("quantity");
+        entity.Property(e => e.UnitPrice).HasColumnName("unit_price");
+        entity.Property(e => e.Discount).HasColumnName("discount");
+    });
+
+    // --- Stock (composite key) ---
+    modelBuilder.Entity<Stock>(entity =>
+    {
+        entity.HasKey(e => new { e.StoreId, e.ProductId }).HasName("pk_stocks");
+        entity.ToTable("stocks");
+
+        entity.Property(e => e.QuantityInStock)
+              .HasColumnName("quantity_in_stock");
+        entity.Property(e => e.UpdatedAt)
+              .HasColumnName("updated_at");
+
+        entity.HasOne(e => e.Product)
+              .WithMany(p => p.Stocks)
+              .HasForeignKey(e => e.ProductId)
+              .HasConstraintName("fk_stocks_product");
+
+        entity.HasOne(e => e.Store)
+              .WithMany(s => s.Stocks)
+              .HasForeignKey(e => e.StoreId)
+              .HasConstraintName("fk_stocks_store");
+    });
+
+    // --- Order (billing/shipping + tracking) ---
+    modelBuilder.Entity<Order>(entity =>
+    {
+        entity.HasKey(e => e.OrderId).HasName("orders_pkey");
+        entity.ToTable("orders");
+
+        entity.HasOne(o => o.BillingAddress)
+              .WithMany(a => a.OrderBillingAddresses)
+              .HasForeignKey(o => o.BillingAddressId)
+              .OnDelete(DeleteBehavior.Restrict)
+              .HasConstraintName("fk_orders_billing_address");
+
+        entity.HasOne(o => o.ShippingAddress)
+              .WithMany(a => a.OrderShippingAddresses)
+              .HasForeignKey(o => o.ShippingAddressId)
+              .OnDelete(DeleteBehavior.Restrict)
+              .HasConstraintName("fk_orders_shipping_address");
+
+        entity.Property(o => o.TrackingNumber)
+              .HasColumnName("tracking_number")
+              .HasMaxLength(50);
+        entity.Property(o => o.ShippedDate)
+              .HasColumnName("shipped_date");
+        entity.Property(o => o.DeliveredDate)
+              .HasColumnName("delivered_date");
+    });
+
+    // --- Carrier ---
+    modelBuilder.Entity<Carrier>(entity =>
+    {
+        entity.HasKey(e => e.CarrierId).HasName("carriers_pkey");
+        entity.ToTable("carriers");
+
+        entity.Property(e => e.CarrierName)
+              .HasColumnName("carrier_name")
+              .HasMaxLength(50);
+        entity.Property(e => e.ContactUrl)
+              .HasColumnName("contact_url")
+              .HasMaxLength(50);
+        entity.Property(e => e.ContactPhone)
+              .HasColumnName("contact_phone")
+              .HasMaxLength(50);
+
+        entity.HasMany(c => c.Orders)
+              .WithOne(o => o.Carrier)
+              .HasForeignKey(o => o.CarrierId)
+              .OnDelete(DeleteBehavior.SetNull);
+    });
+
+    OnModelCreatingPartial(modelBuilder);
+}

@@ -1,29 +1,25 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;  // ← for the attributes
 
 namespace WebStore.Entities;
 
 public partial class Address
 {
+    public Address()
+    {
+        OrderBillingAddresses  = new HashSet<Order>();
+        OrderShippingAddresses = new HashSet<Order>();
+    }
+
     public int AddressId { get; set; }
+    // … other props …
 
-    public int CustomerId { get; set; }
+    [InverseProperty(nameof(Order.BillingAddress))]
+    public virtual ICollection<Order> OrderBillingAddresses { get; set; }
 
-    public string? Street { get; set; }
+    [InverseProperty(nameof(Order.ShippingAddress))]
+    public virtual ICollection<Order> OrderShippingAddresses { get; set; }
 
-    public string? City { get; set; }
-
-    public string? State { get; set; }
-
-    public string? PostalCode { get; set; }
-
-    public string? Country { get; set; }
-
-    public string? AddressType { get; set; }
-
-    public virtual Customer Customer { get; set; } = null!;
-
-    public virtual ICollection<Order> OrderBillingAddresses { get; set; } = new List<Order>();
-
-    public virtual ICollection<Order> OrderShippingAddresses { get; set; } = new List<Order>();
+    // … customer nav etc …
 }
